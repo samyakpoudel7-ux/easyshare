@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>EasyShare · private file and note sharing</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+    <div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+      <a id="logo" href="/" class="text-lg font-semibold tracking-tight">EasyShare</a>
+      <div id="auth-area" class="flex items-center gap-2 text-sm"></div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-4xl px-4 py-8">
+    <!-- HOME -->
+    <section id="view-home" class="hidden">
+      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Send files and secrets that only the recipient can open.</h1>
+      <p class="mt-3 max-w-2xl text-slate-600 dark:text-slate-400">Everything is encrypted in your browser before it leaves your device. Links work from any network, shares delete themselves after 7 days, and there are no ads.</p>
+
+      <div class="mt-8 flex gap-2" role="tablist">
+        <button id="tab-share" class="tab" role="tab" aria-selected="true">Share files and text</button>
+        <button id="tab-note" class="tab" role="tab" aria-selected="false">Secret note</button>
+      </div>
+
+      <div id="panel-share" class="card mt-3">
+        <label id="dropzone" for="file-input" class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 px-4 py-12 text-center transition hover:border-teal-600 dark:border-slate-700">
+          <span class="font-medium">Drop files here, click to browse, or press Ctrl+V to paste</span>
+          <span id="limits" class="mt-1 text-sm text-slate-500"></span>
+          <input id="file-input" type="file" multiple class="sr-only">
+        </label>
+        <ul id="pending" class="mt-4 divide-y divide-slate-200 text-sm dark:divide-slate-800"></ul>
+        <div class="mt-4">
+          <label class="label" for="home-text">Text to include (optional)</label>
+          <textarea id="home-text" rows="3" class="input" placeholder="Paste a link, a snippet, a password…"></textarea>
+        </div>
+        <div class="mt-4 flex items-center justify-between gap-3">
+          <p id="pending-total" class="text-sm text-slate-500"></p>
+          <button id="start-share" class="btn btn-primary">Create share link</button>
+        </div>
+      </div>
+
+      <div id="panel-note" class="card mt-3 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap gap-1" id="md-toolbar">
+            <button class="btn btn-ghost !px-3 !py-1" data-md="bold" type="button"><b>B</b></button>
+            <button class="btn btn-ghost !px-3 !py-1" data-md="italic" type="button"><i>I</i></button>
+            <button class="btn btn-ghost !px-3 !py-1 font-mono" data-md="code" type="button">`code`</button>
+            <button class="btn btn-ghost !px-3 !py-1 font-mono" data-md="block" type="button">```</button>
+            <button class="btn btn-ghost !px-3 !py-1" data-md="list" type="button">List</button>
+          </div>
+          <button id="note-preview-btn" class="btn btn-ghost !py-1" type="button">Preview</button>
+        </div>
+        <textarea id="note-body" rows="10" class="input mt-3 font-mono" placeholder="Write the secret. Markdown and code blocks are supported."></textarea>
+        <div id="note-preview" class="md mt-3 hidden rounded-lg border border-slate-200 p-4 dark:border-slate-800"></div>
+
+        <div class="mt-5 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="label" for="note-mode">Destroy the note</label>
+            <select id="note-mode" class="input">
+              <option value="burn">After it is read once</option>
+              <option value="timer">After a countdown</option>
+              <option value="date">On a specific date and time</option>
+            </select>
+          </div>
+          <div id="ttl-wrap" class="hidden">
+            <label class="label" for="note-ttl">Countdown</label>
+            <select id="note-ttl" class="input">
+              <option value="300">5 minutes</option>
+              <option value="3600" selected>1 hour</option>
+              <option value="86400">24 hours</option>
+              <option value="604800">7 days</option>
+            </select>
+          </div>
+          <div id="date-wrap" class="hidden">
+            <label class="label" for="note-date">Expires on</label>
+            <input id="note-date" type="datetime-local" class="input">
+          </div>
+          <div>
+            <label class="label" for="note-pw">Password (optional)</label>
+            <input id="note-pw" type="password" autocomplete="new-password" class="input" placeholder="Needed to open the note">
+          </div>
+        </div>
+        <div class="mt-4 space-y-2 text-sm">
+          <label class="flex items-start gap-2"><input id="note-owner" type="checkbox" class="mt-1"> <span>Only I can open this note (requires signing in)</span></label>
+          <label class="flex items-start gap-2"><input id="note-notify" type="checkbox" class="mt-1"> <span>Email me when someone opens it (requires signing in)</span></label>
+        </div>
+        <div class="mt-5 flex justify-end"><button id="create-note" class="btn btn-primary">Create secret link</button></div>
+
+        <div id="note-result" class="mt-5 hidden rounded-lg bg-slate-100 p-4 dark:bg-slate-800">
+          <p class="text-sm font-medium">Your secret link is ready</p>
+          <div class="mt-2 flex gap-2"><input id="note-link" readonly class="input font-mono"><button id="note-copy" class="btn btn-primary">Copy link</button></div>
+          <p id="note-result-hint" class="mt-2 text-sm text-slate-600 dark:text-slate-400"></p>
+          <div id="note-qr" class="mt-3 w-40 rounded bg-white p-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHARE ROOM -->
+    <section id="view-share" class="hidden">
+      <div class="card">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h1 class="text-xl font-semibold">Shared space</h1>
+          <p id="room-expiry" class="text-sm text-slate-500"></p>
+        </div>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Anyone with this link sees changes live, on any network. The decryption key lives in the part of the link after the # and is never sent to our servers.</p>
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input id="room-link" readonly class="input font-mono">
+          <button id="room-copy" class="btn btn-primary">Copy link</button>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button id="room-qr-btn" class="btn btn-ghost">Show QR code</button>
+          <button id="room-ro" class="btn btn-ghost hidden">Copy read-only link</button>
+          <button id="room-delete" class="btn btn-danger hidden">Delete now</button>
+        </div>
+        <div id="room-qr" class="mt-3 hidden w-48 rounded bg-white p-2"></div>
+      </div>
+
+      <div id="room-add" class="card mt-4 hidden">
+        <label id="room-drop" for="room-file" class="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 px-4 py-6 text-center text-sm transition hover:border-teal-600 dark:border-slate-700">
+          Add files: drop, browse, or press Ctrl+V
+          <input id="room-file" type="file" multiple class="sr-only">
+        </label>
+        <div class="mt-3 flex gap-2">
+          <textarea id="room-text" rows="2" class="input" placeholder="Send text to every device in this space"></textarea>
+          <button id="room-send" class="btn btn-primary self-start">Send</button>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">Files <span id="file-count" class="font-normal text-slate-500"></span></h2>
+          <button id="zip-all" class="btn btn-ghost hidden">Download all as .zip</button>
+        </div>
+        <ul id="room-files" class="mt-2 divide-y divide-slate-200 dark:divide-slate-800"></ul>
+        <p id="no-files" class="py-6 text-center text-sm text-slate-500">No files yet.</p>
+      </div>
+
+      <div id="texts-card" class="card mt-4 hidden">
+        <h2 class="font-semibold">Text</h2>
+        <ul id="room-texts" class="mt-2 space-y-3"></ul>
+      </div>
+    </section>
+
+    <!-- NOTE VIEW -->
+    <section id="view-note" class="hidden">
+      <div id="note-gate" class="card mx-auto max-w-lg"></div>
+      <div id="note-content" class="card hidden">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p id="note-status" class="text-sm text-slate-600 dark:text-slate-400"></p>
+          <button id="note-copy-text" class="btn btn-primary">Copy text</button>
+        </div>
+        <div id="note-render" class="md mt-4"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mx-auto max-w-4xl px-4 pb-10 text-center text-sm text-slate-500">No ads, no trackers. Shares delete after 7 days.</footer>
+
+  <div id="upload-panel" class="fixed bottom-4 right-4 z-20 hidden w-72 rounded-xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+    <p id="up-label" class="text-sm font-medium"></p>
+    <p id="up-name" class="truncate text-xs text-slate-500"></p>
+    <div class="mt-2 h-2 overflow-hidden rounded bg-slate-200 dark:bg-slate-700"><div id="up-bar" class="h-2 w-0 bg-teal-600 transition-all"></div></div>
+    <p id="up-text" class="mt-1 text-xs text-slate-500"></p>
+  </div>
+  <div id="toast" class="pointer-events-none fixed bottom-4 left-1/2 z-30 hidden -translate-x-1/2 rounded-lg bg-slate-900 px-4 py-2 text-sm text-white shadow-lg"></div>
+
+  <dialog id="auth" class="w-full max-w-sm rounded-xl bg-white p-6 text-slate-900 backdrop:bg-slate-900/50 dark:bg-slate-900 dark:text-slate-100">
+    <h2 id="auth-title" class="text-lg font-semibold">Sign in</h2>
+    <div class="mt-4 space-y-3">
+      <div><label class="label" for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="email" class="input"></div>
+      <div><label class="label" for="auth-pw">Password</label><input id="auth-pw" type="password" autocomplete="current-password" class="input"></div>
+      <p id="auth-err" class="hidden text-sm text-red-600"></p>
+    </div>
+    <div class="mt-5 flex items-center justify-between">
+      <button id="auth-switch" class="text-sm text-teal-700 underline dark:text-teal-400" type="button">Create an account</button>
+      <div class="flex gap-2"><button id="auth-cancel" class="btn btn-ghost" type="button">Cancel</button><button id="auth-submit" class="btn btn-primary" type="button">Sign in</button></div>
+    </div>
+  </dialog>
+
+  <script src="/vendor/qrcode.js"></script>
+  <script src="/vendor/purify.js"></script>
+  <script src="/vendor/marked.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
